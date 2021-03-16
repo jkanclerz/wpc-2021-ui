@@ -16,38 +16,44 @@ const userPool = new CognitoUserPool({
 });
 
 const register = (registerRequest) => {
-    //@ToDO inrroduce Promie instead of callbacks
-    const attributeList = [
-        new CognitoUserAttribute({
-            Name: 'website',
-            Value: registerRequest.website,
-        })
-    ];
-
-    userPool.signUp(registerRequest.email, registerRequest.password, attributeList, null, (err, result) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-
-        console.log(result);
+    return new Promise((resolve, reject) => {
+        const attributeList = [
+            new CognitoUserAttribute({
+                Name: 'website',
+                Value: registerRequest.website,
+            })
+        ];
+    
+        userPool.signUp(
+            registerRequest.email,
+            registerRequest.password,
+            attributeList,
+            null,
+            (err, result) => {
+                if (err) {
+                    reject(err)
+                }
+        
+                resolve(result);
+            }
+        )
     })
 }
 
 const confirmAccount = (confirmRequest) => {
-    const user = new CognitoUser({
-        Username: confirmRequest.email,
-        Pool: userPool
+    return new Promise((resolve, reject) => {
+        const user = new CognitoUser({
+            Username: confirmRequest.email,
+            Pool: userPool
+        });
+
+        user.confirmRegistration(confirmRequest.code, true, (err, result) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(result);
+        })
     });
-
-    user.confirmRegistration(confirmRequest.code, true, (err, result) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-
-        console.log(result);
-    })
 }
 
 const login = (loginRequest) => {
@@ -61,13 +67,45 @@ const login = (loginRequest) => {
         Pool: userPool
     });
 
-    user.authenticateUser(authDetails, {
-        onSuccess: (result) => {
-            console.log(result);
-        },
-        onFailure: (err) => {
-            console.log(err);
+    return new Promise((resolve, reject) => {
+        user.authenticateUser(authDetails, {
+            onSuccess: (result) => {
+                resolve(result);
+            },
+            onFailure: (err) => {
+                reject(err);
+            }
+        })
+    });
+}
+
+const getCurrentUser = () => {
+    return new Promise((resolve, reject) => {
+        const user = userPool.getCurrentUser();
+
+        if (user == null) {
+            reject("User not available");
         }
+
+        user.getSession((err, session) => {
+            if (err) {
+                reject(err);
+            }
+            
+            user.getUserAttributes((err, attributes) => {
+                if (err) {
+                    reject(err);
+                }
+
+                const profile = attributes.reduce((profile, item) => {
+                    return {...profile, [item.Name]: item.Value}
+                }, {});
+
+                resolve(profile)
+            });
+
+        })
+        
     })
 }
 
@@ -78,7 +116,10 @@ const registerRequestPayload = {
     website: 'jkan.pl',
 }
 registerBtn.addEventListener('click', () => {
-    register(registerRequestPayload);
+    register(registerRequestPayload)
+        .then(result => console.log(result))
+        .catch(err => console.log(err))
+    ;
 });
 
 
@@ -89,6 +130,9 @@ const confirmAccountRequest = {
 };
 confirmAccountBtn.addEventListener('click', () => {
     confirmAccount(confirmAccountRequest)
+        .then(result => console.log(result))
+        .catch(err => console.log(err))
+    ;
 });
 
 const loginBtn = document.querySelector('button.login');
@@ -97,10 +141,16 @@ const loginRequestPayload = {
     password: registerRequestPayload.password,
 };
 loginBtn.addEventListener('click', () => {
-    login(loginRequestPayload);
+    login(loginRequestPayload)
+        .then(result => console.log(result))
+        .catch(err => console.log(err))
+    ;
 });
 
 
 (() => {
-    hello("Kuba ;)");
+    getCurrentUser()
+        .then(profile => hello(profile.email))
+        .catch(err => hello('Guest'))
+    ;
 })();
