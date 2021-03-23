@@ -10,6 +10,10 @@ import {
 } from 'amazon-cognito-identity-js';
 
 import S3 from 'aws-sdk/clients/s3';
+import AWS from 'aws-sdk/global';
+import {CognitoIdentityCredentials} from 'aws-sdk/global';
+
+AWS.config.region = aws_config.region;
 
 const userPool = new CognitoUserPool({
     UserPoolId: aws_config.userPoolId,
@@ -80,6 +84,26 @@ const login = (loginRequest) => {
     });
 }
 
+const loadSavedCredentials = () => {
+    return new Promise((resolve, reject) => {
+        const user = userPool.getCurrentUser();
+
+        if (user == null) {
+            reject("User not available");
+        }
+
+        user.getSession((err, session) => {
+            if (err) {
+                reject(err);
+            }
+            
+            resolve(session);
+
+        })
+        
+    })
+}
+
 const getCurrentUser = () => {
     return new Promise((resolve, reject) => {
         const user = userPool.getCurrentUser();
@@ -110,6 +134,15 @@ const getCurrentUser = () => {
     })
 }
 
+const refreshAwsCredentials = (tokenData) => {
+    AWS.config.credentials = new CognitoIdentityCredentials({
+        IdentityPoolId: aws_config.identityPoolId,
+        Logins: {
+            'cognito-idp.eu-central-1.amazonaws.com/eu-central-1_vJ7tUmKmn': tokenData.getIdToken().getJwtToken()
+        }
+    });
+}
+
 const listFiles = () => {
     const s3 = new S3();
     return new Promise((resolve, reject) => {
@@ -125,6 +158,8 @@ const listFiles = () => {
         })
     });
 }
+
+
 
 const registerBtn = document.querySelector('button.register');
 const registerRequestPayload = {
@@ -161,7 +196,7 @@ const loginRequestPayload = {
 
 loginBtn.addEventListener('click', () => {
     login(loginRequestPayload)
-        .then(result => console.log(result))
+        .then(data => refreshAwsCredentials(data))
         .catch(err => console.log(err))
     ;
 });
@@ -175,6 +210,10 @@ listFilesBtn.addEventListener('click', () => {
 
 
 (() => {
+    loadSavedCredentials()
+        .then(session => refreshAwsCredentials(session))
+        .catch(err => console.log('cant reload credentials'));
+
     getCurrentUser()
         .then(profile => hello(profile.email))
         .catch(err => hello('Guest'))

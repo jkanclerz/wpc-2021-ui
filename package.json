@@ -12,10 +12,10 @@
   "license": "ISC",
   "dependencies": {
     "aws-amplify": "^3.3.23",
-    "aws-sdk": "^2.859.0"
+    "aws-sdk": "^2.869.0"
   },
   "devDependencies": {
-    "webpack": "^5.24.4",
+    "webpack": "^4.4",
     "webpack-cli": "^4.5.0"
   }
 }
