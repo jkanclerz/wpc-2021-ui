@@ -9,6 +9,7 @@ import {
     AuthenticationDetails,
 } from 'amazon-cognito-identity-js';
 
+import S3 from 'aws-sdk/clients/s3';
 
 const userPool = new CognitoUserPool({
     UserPoolId: aws_config.userPoolId,
@@ -109,12 +110,29 @@ const getCurrentUser = () => {
     })
 }
 
+const listFiles = () => {
+    const s3 = new S3();
+    return new Promise((resolve, reject) => {
+        s3.listObjectsV2({
+            Bucket: aws_config.bucketName,
+            MaxKeys: 10
+        }, (err, date) => {
+            if (err) {
+                reject(err);
+            }
+            
+            resolve(date);
+        })
+    });
+}
+
 const registerBtn = document.querySelector('button.register');
 const registerRequestPayload = {
     email: "bgc65182@eoopy.com",
     password: "1234qwer",
     website: 'jkan.pl',
 }
+
 registerBtn.addEventListener('click', () => {
     register(registerRequestPayload)
         .then(result => console.log(result))
@@ -140,10 +158,18 @@ const loginRequestPayload = {
     email: registerRequestPayload.email,
     password: registerRequestPayload.password,
 };
+
 loginBtn.addEventListener('click', () => {
     login(loginRequestPayload)
         .then(result => console.log(result))
         .catch(err => console.log(err))
+    ;
+});
+
+const listFilesBtn = document.querySelector('button.listFiles');
+listFilesBtn.addEventListener('click', () => {
+    listFiles()
+        .then(myFiles => console.log(myFiles))
     ;
 });
 
