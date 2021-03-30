@@ -149,17 +149,45 @@ const listFiles = () => {
         s3.listObjectsV2({
             Bucket: aws_config.bucketName,
             MaxKeys: 10
-        }, (err, date) => {
+        }, (err, data) => {
             if (err) {
                 reject(err);
             }
             
-            resolve(date);
+            resolve(data.Contents.map(item => {
+                return {
+                    name: item.Key,
+                    size: item.Size,
+                }
+            }));
         })
     });
 }
 
+const uploadToS3 = (userId, file, onProgress) => {
+    return new Promise((resolve, reject) => {
+        const destKey = `uek-krakow/${userId}/images/${file.name}`;
+        const params = {
+            Body: file,
+            Bucket: aws_config.bucketName,
+            Key: destKey,
+        }
+    
+        const s3 = new S3();
+        
+        s3.putObject(params, (err, data) => {
+            if (err) {
+                reject(err);
+            }
 
+            resolve(destKey);
+        }).on('httpUploadProgress', (progress) => {
+            const currentProgress = Math.round((progress.loaded / progress.total) * 100);
+            onProgress(currentProgress);
+            console.log(`current progres is: ${currentProgress}%`);
+        })
+    });
+}
 
 const registerBtn = document.querySelector('button.register');
 const registerRequestPayload = {
@@ -206,6 +234,28 @@ listFilesBtn.addEventListener('click', () => {
     listFiles()
         .then(myFiles => console.log(myFiles))
     ;
+});
+
+const uploadFileBtn = document.querySelector('div.upload .upload__btn');
+uploadFileBtn.addEventListener('click', () => {
+    const filesInput = document.querySelector('div.upload .upload__input');
+    if (!filesInput.files.length > 0) {
+        console.log('no files were choosen');
+        return;
+    }
+
+    const progressBarEl = document.querySelector('.upload__progress');
+
+    const toBeUploadedFiles = [...filesInput.files];
+    const userId = AWS.config.credentials.identityId;
+    toBeUploadedFiles.forEach((file, i) => {
+        uploadToS3(userId, file, (currentProgess) => {
+            progressBarEl.style.width = `${currentProgess}%`;
+            progressBarEl.textContent = `uploading ... ${currentProgess} %`;
+        })
+            .then(res => console.log(res))
+        ;
+    })
 });
 
 

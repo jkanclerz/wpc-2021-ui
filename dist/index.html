@@ -2,6 +2,19 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <style>
+        .upload__progress-container {
+          border: 1px solid #000;
+          margin-top: 20px;
+          background: lightgray;
+        }
+
+        .upload__progress {
+          background: yellow;
+          width: 0%;
+          min-height: 50px;
+        }
+    </style>
   </head>
   <body>
     <h1>My Application :)</h1>
@@ -10,6 +23,15 @@
     <button class="confirmAccount">Confirm Account</button>
     <button class="login">Login</button>
     <button class="listFiles">list files</button>
+
+    <div class="upload">
+        <input class="upload__input" type="file" />
+        <button class="upload__btn">Upload it</button>
+        <div class="upload__progress-container">
+            <div class="upload__progress">0%</div>
+        </div>
+    </div>
+
 
     <script src="/bundle.js"></script>
   </body>
