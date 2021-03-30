@@ -12,6 +12,7 @@ import {
 import S3 from 'aws-sdk/clients/s3';
 import AWS from 'aws-sdk/global';
 import {CognitoIdentityCredentials} from 'aws-sdk/global';
+import { uuid } from 'uuidv4';
 
 AWS.config.region = aws_config.region;
 
@@ -20,6 +21,15 @@ const userPool = new CognitoUserPool({
     ClientId: aws_config.clientId,
 });
 
+let order = [];
+
+const addToOrder = (key) => {
+    order.push(key);
+    return key;
+}
+
+
+///AUTH ############
 const register = (registerRequest) => {
     return new Promise((resolve, reject) => {
         const attributeList = [
@@ -143,6 +153,7 @@ const refreshAwsCredentials = (tokenData) => {
     });
 }
 
+//// File storage #################3
 const listFiles = () => {
     const s3 = new S3();
     return new Promise((resolve, reject) => {
@@ -166,7 +177,7 @@ const listFiles = () => {
 
 const uploadToS3 = (userId, file, onProgress) => {
     return new Promise((resolve, reject) => {
-        const destKey = `uek-krakow/${userId}/images/${file.name}`;
+        const destKey = `uek-krakow/${userId}/images/${uuid()}/${file.name}`;
         const params = {
             Body: file,
             Bucket: aws_config.bucketName,
@@ -187,6 +198,41 @@ const uploadToS3 = (userId, file, onProgress) => {
             console.log(`current progres is: ${currentProgress}%`);
         })
     });
+}
+
+const getPresigendUrl = (key) => {
+    const params = {
+        Bucket: aws_config.bucketName,
+        Key: key
+    }
+
+    const s3 = new S3();
+
+    return s3.getSignedUrl('getObject', params);
+}
+
+///// Html operations 
+
+const createElementFromString = (template) => {
+    const parent = document.createElement('div');
+    parent.innerHTML = template.trim();
+    return parent.firstChild;
+}
+
+const addToUploadedPreview = (url) => {
+    const itemTemplate = `
+    <li>
+        <img src="${url}" width="200"/>
+    </li>`;
+    const el = createElementFromString(itemTemplate);
+    const uploadedList = document.querySelector('.uploadedPreview');
+    uploadedList.appendChild(el);
+}
+
+const clearUploadArea = (filesInput, progressBarEl) => {
+    progressBarEl.style.width = `0%`;
+    progressBarEl.textContent = `0%`;
+    filesInput.value = '';
 }
 
 const registerBtn = document.querySelector('button.register');
@@ -253,9 +299,28 @@ uploadFileBtn.addEventListener('click', () => {
             progressBarEl.style.width = `${currentProgess}%`;
             progressBarEl.textContent = `uploading ... ${currentProgess} %`;
         })
-            .then(res => console.log(res))
+            .then(res => addToOrder(res))
+            .then(res => getPresigendUrl(res))
+            .then(url => addToUploadedPreview(url))
+            .finally(() => clearUploadArea(filesInput, progressBarEl))
         ;
     })
+});
+
+const orderAnimationBtn = document.querySelector('button.orderAnimation');
+
+orderAnimationBtn.addEventListener('click', () => {
+    const orderRequest = {
+        email: registerRequestPayload.email,
+        photos: [...order]
+    }
+    console.log(orderRequest);
+    console.log('i going to send it via API');
+});
+
+const cancelOrderBtn = document.querySelector('button.cancelOrder');
+cancelOrderBtn.addEventListener('click', () => {
+    order = [];
 });
 
 
