@@ -144,6 +144,24 @@ const getCurrentUser = () => {
     })
 }
 
+const getAccessToken = () => {
+    return new Promise((resolve, reject) => {
+        const user = userPool.getCurrentUser();
+
+        if (user == null) {
+            reject("User not available");
+        }
+
+        user.getSession((err, session) => {
+            if (err) {
+                reject(err);
+            }
+            
+            resolve(session.getIdToken().getJwtToken())
+        })
+    })
+}
+
 const refreshAwsCredentials = (tokenData) => {
     AWS.config.credentials = new CognitoIdentityCredentials({
         IdentityPoolId: aws_config.identityPoolId,
@@ -209,6 +227,19 @@ const getPresigendUrl = (key) => {
     const s3 = new S3();
 
     return s3.getSignedUrl('getObject', params);
+}
+
+///// ORDERING
+
+const orderAnimation = (token, orderRequest) => {
+    return fetch(`${aws_config.apiBaseUrl}/orders`, {
+        method: 'POST',
+        headers: {
+            'Authentication': token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderRequest)
+    })
 }
 
 ///// Html operations 
@@ -314,8 +345,11 @@ orderAnimationBtn.addEventListener('click', () => {
         email: registerRequestPayload.email,
         photos: [...order]
     }
-    console.log(orderRequest);
-    console.log('i going to send it via API');
+    getAccessToken()
+        .then(token => orderAnimation(token, orderRequest))
+        .then(resp => console.log(resp.json()))
+        .catch(err => console.log(err))
+    ;    
 });
 
 const cancelOrderBtn = document.querySelector('button.cancelOrder');

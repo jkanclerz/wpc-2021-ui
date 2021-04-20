@@ -5,4 +5,5 @@ export const aws_config = {
     userPoolId: 'your user pool id',
     clientId: 'your client app id',
     bucketName: 'your bucket name',
+    apiBaseUrl: 'your API URL'
 }
