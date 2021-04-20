@@ -235,7 +235,7 @@ const orderAnimation = (token, orderRequest) => {
     return fetch(`${aws_config.apiBaseUrl}/orders`, {
         method: 'POST',
         headers: {
-            'Authentication': token,
+            'Authorization': token,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(orderRequest)
